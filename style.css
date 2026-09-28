@@ -63,6 +63,18 @@ body {
     height: auto;
     display: block;
 }
+@media (max-width: 750px) {
+    .logo {
+        padding: 15px 0;
+        overflow: visible;
+    }
+
+    .logo img {
+        width: 60px;
+        max-width: none;
+        height: auto;
+    }
+}
 
 
 .logo-icone {
@@ -1471,12 +1483,4 @@ footer {
 
     }
 
-}
-@media (max-width: 750px) {
-    .logo img {
-        width: 85px;
-        max-width: none;
-        height: auto;
-        margin-left: -8px;
-    }
 }
