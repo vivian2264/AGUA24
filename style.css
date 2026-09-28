@@ -1472,3 +1472,9 @@ footer {
     }
 
 }
+@media (max-width: 750px){
+    .logo img {
+        width: 55px;
+        height: auto;
+    }
+}
