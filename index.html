@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ÁGUA 24 | Inteligência Hídrica</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <!-- =====================================================
+         MENU LATERAL
+    ====================================================== -->
+
+    <aside class="sidebar">
+
+        <div class="logo">
+
+            <img src="/logo-agua24.png" alt="logo agua24">
+                
+            </div>
+
+
+
+        <nav>
+
+            <button class="menu active"
+                onclick="abrirPagina('painel', this)">
+                🏠
+                <span>Painel</span>
+            </button>
+
+
+            <button class="menu"
+                onclick="abrirPagina('tempo', this)">
+                📡
+                <span>Dados em Tempo Real</span>
+            </button>
+
+
+            <button class="menu"
+                onclick="abrirPagina('anomalias', this)">
+                🧠
+                <span>Anomalias</span>
+            </button>
+
+
+            <button class="menu"
+                onclick="abrirPagina('mapa', this)">
+                🗺️
+                <span>Mapa de Risco</span>
+            </button>
+
+
+            <button class="menu"
+                onclick="abrirPagina('alertas', this)">
+                🚨
+                <span>Alertas 24</span>
+            </button>
+
+        </nav>
+
+
+        <div class="rodape-menu">
+
+            PROTÓTIPO ACADÊMICO
+
+            <br>
+
+            <b>ÁGUA 24</b>
+
+        </div>
+
+    </aside>
+
+
+
+    <!-- =====================================================
+         CONTEÚDO PRINCIPAL
+    ====================================================== -->
+
+    <main>
+
+        <header>
+
+            <div>
+
+                <p class="subtitulo">
+                    MONITORAMENTO PREVENTIVO
+                </p>
+
+                <h1 id="tituloPagina">
+                    Painel
+                </h1>
+
+            </div>
+
+
+            <div class="cabecalho-direita">
+
+                <div class="ultima-atualizacao">
+
+                    <span>Última atualização</span>
+
+                    <strong id="hora">
+                        --:--:--
+                    </strong>
+
+                </div>
+
+
+                <button
+                    class="atualizar"
+                    onclick="atualizarDados(true)">
+
+                    🔄 Atualizar
+
+                </button>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- =====================================================
+             PAINEL
+        ====================================================== -->
+
+        <section id="painel" class="pagina ativa">
+
+
+            <!-- HERO -->
+
+            <div class="hero">
+
+                <div>
+
+                    <p class="subtitulo hero-subtitulo">
+                        REGIÃO MONITORADA
+                    </p>
+
+                    <h2>
+                        Região Nordeste
+                    </h2>
+
+                    <p>
+                        Transformando dados hídricos em prevenção.
+                    </p>
+
+                </div>
+
+
+                <div id="status"
+                    class="status">
+
+                    🟡 ATENÇÃO
+
+                </div>
+
+            </div>
+
+
+
+            <!-- CARDS -->
+
+            <div class="cards">
+
+
+                <div class="card">
+
+                    <span>
+                        💧 Disponibilidade
+                    </span>
+
+                    <strong id="disponibilidade">
+                        89%
+                    </strong>
+
+                    <small id="variacaoDisponibilidade">
+                        ↓ 11%
+                    </small>
+
+                </div>
+
+
+
+                <div class="card">
+
+                    <span>
+                        🌧️ Chuva acumulada
+                    </span>
+
+                    <strong id="chuva">
+                        68 mm
+                    </strong>
+
+                    <small id="variacaoChuva">
+                        ↓ 32%
+                    </small>
+
+                </div>
+
+
+
+                <div class="card">
+
+                    <span>
+                        🚰 Consumo
+                    </span>
+
+                    <strong id="consumo">
+                        118%
+                    </strong>
+
+                    <small class="vermelho"
+                        id="variacaoConsumo">
+
+                        ↑ 18%
+
+                    </small>
+
+                </div>
+
+
+
+                <div class="card">
+
+                    <span>
+                        ⚠️ Risco estimado
+                    </span>
+
+                    <strong id="risco">
+                        MODERADO
+                    </strong>
+
+                    <small id="pontuacao">
+                        62/100
+                    </small>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- GRÁFICO + EXPLICAÇÃO -->
+
+            <div class="duas-colunas">
+
+
+                <div class="painel-box">
+
+                    <div class="titulo-box">
+
+                        <div>
+
+                            <h3>
+                                Evolução dos indicadores
+                            </h3>
+
+                            <p class="descricao-box">
+                                Comparação com o padrão recente
+                            </p>
+
+                        </div>
+
+                        <span>
+                            SIMULAÇÃO
+                        </span>
+
+                    </div>
+
+
+                    <div class="grafico-container">
+
+                        <canvas id="grafico"></canvas>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="painel-box">
+
+                    <div class="titulo-box">
+
+                        <div>
+
+                            <h3>
+                                🧠 Por que o risco mudou?
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+
+                    <div id="motivos">
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- RESUMO PREVENTIVO -->
+
+            <div class="painel-box resumo-preventivo">
+
+                <div class="resumo-icone">
+                    🔎
+                </div>
+
+                <div>
+
+                    <h3>
+                        O que o ÁGUA 24 está procurando?
+                    </h3>
+
+                    <p>
+                        O sistema compara os indicadores atuais
+                        com padrões anteriores para identificar
+                        alterações que possam merecer atenção.
+                    </p>
+
+                    <b>
+                        O objetivo é detectar sinais antes que
+                        eles se transformem em um problema maior.
+                    </b>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             DADOS EM TEMPO REAL
+        ====================================================== -->
+
+        <section id="tempo" class="pagina">
+
+            <div class="painel-box">
+
+                <div class="titulo-box">
+
+                    <div>
+
+                        <h2>
+                            📡 Dados monitorados
+                        </h2>
+
+                        <p class="descricao-box">
+                            Estrutura preparada para integração
+                            com fontes de dados
+                        </p>
+
+                    </div>
+
+                    <span>
+                        PROTÓTIPO
+                    </span>
+
+                </div>
+
+
+
+                <div class="dados">
+
+
+                    <div class="dado">
+
+                        <label>
+                            Fonte de referência
+                        </label>
+
+                        <strong>
+                            ANA
+                        </strong>
+
+                        <small>
+                            Agência Nacional de Águas e Saneamento Básico
+                        </small>
+
+                    </div>
+
+
+
+                    <div class="dado">
+
+                        <label>
+                            Estação
+                        </label>
+
+                        <strong>
+                            Estação Hidrológica 001
+                        </strong>
+
+                        <small>
+                            Identificação demonstrativa
+                        </small>
+
+                    </div>
+
+
+
+                    <div class="dado">
+
+                        <label>
+                            Última atualização
+                        </label>
+
+                        <strong id="horaTempo">
+                            --:--:--
+                        </strong>
+
+                        <small>
+                            Horário local do sistema
+                        </small>
+
+                    </div>
+
+
+
+                    <div class="dado">
+
+                        <label>
+                            Nível
+                        </label>
+
+                        <strong id="nivel">
+                            286 cm
+                        </strong>
+
+                        <small>
+                            Centímetros
+                        </small>
+
+                    </div>
+
+
+
+                    <div class="dado">
+
+                        <label>
+                            Vazão
+                        </label>
+
+                        <strong id="vazao">
+                            42,8 m³/s
+                        </strong>
+
+                        <small>
+                            Metros cúbicos por segundo
+                        </small>
+
+                    </div>
+
+
+
+                    <div class="dado">
+
+                        <label>
+                            Chuva acumulada
+                        </label>
+
+                        <strong id="chuvaTempo">
+                            68 mm
+                        </strong>
+
+                        <small>
+                            Valor demonstrativo
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="aviso">
+
+                    <div class="aviso-titulo">
+                        🟢 Arquitetura preparada para integração
+                    </div>
+
+                    <p>
+                        Nesta versão do protótipo, os valores são
+                        <b>simulados exclusivamente para demonstração</b>.
+                    </p>
+
+                    <p>
+                        Em uma evolução do sistema, esses dados poderão
+                        ser recebidos de sensores, estações de monitoramento
+                        e bases públicas.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             ANOMALIAS
+        ====================================================== -->
+
+        <section id="anomalias" class="pagina">
+
+            <div class="duas-colunas">
+
+
+                <div class="painel-box">
+
+                    <div class="titulo-box">
+
+                        <div>
+
+                            <h2>
+                                🧠 Detector de Anomalias
+                            </h2>
+
+                            <p class="descricao-box">
+                                Identificação de alterações fora do padrão
+                            </p>
+
+                        </div>
+
+                        <span>
+                            ALGORITMO
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="barra">
+
+                        <div class="barra-label">
+                            <p>
+                                Padrão de referência
+                            </p>
+                        </div>
+
+
+                        <div class="barra-fundo">
+
+                            <div class="barra-normal">
+                            </div>
+
+                        </div>
+
+
+                        <b>
+                            100%
+                        </b>
+
+                    </div>
+
+
+
+                    <div class="barra">
+
+                        <div class="barra-label">
+                            <p>
+                                Consumo atual
+                            </p>
+                        </div>
+
+
+                        <div class="barra-fundo">
+
+                            <div id="barraAtual"
+                                class="barra-atual">
+                            </div>
+
+                        </div>
+
+
+                        <b id="valorAtual">
+                            118%
+                        </b>
+
+                    </div>
+
+
+
+                    <div id="caixaAnomalia"
+                        class="anomalia">
+
+                        ⚠️
+
+                        <b>
+                            ANOMALIA DETECTADA
+                        </b>
+
+                        <p id="textoAnomalia">
+
+                            O consumo apresenta alteração
+                            em relação ao padrão recente.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="painel-box">
+
+                    <h3>
+                        Como o sistema interpreta?
+                    </h3>
+
+
+                    <div class="etapa">
+
+                        <div class="numero">
+                            1
+                        </div>
+
+                        <div>
+
+                            <b>
+                                Identificação do padrão
+                            </b>
+
+                            <p>
+                                O sistema observa valores anteriores
+                                para estabelecer uma referência.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="etapa">
+
+                        <div class="numero">
+                            2
+                        </div>
+
+                        <div>
+
+                            <b>
+                                Comparação
+                            </b>
+
+                            <p>
+                                O dado atual é comparado com
+                                o comportamento observado.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="etapa">
+
+                        <div class="numero">
+                            3
+                        </div>
+
+                        <div>
+
+                            <b>
+                                Alerta
+                            </b>
+
+                            <p>
+                                Quando existe uma alteração relevante,
+                                o sistema sinaliza a necessidade
+                                de investigação.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+
+
+            <div class="painel-box">
+
+                <h3>
+                    Possíveis causas a investigar
+                </h3>
+
+
+                <div class="causas">
+
+                    <div>
+                        💧
+                        <b>
+                            Possível vazamento
+                        </b>
+                    </div>
+
+                    <div>
+                        🚰
+                        <b>
+                            Aumento excepcional da demanda
+                        </b>
+                    </div>
+
+                    <div>
+                        🌧️
+                        <b>
+                            Alteração nas condições climáticas
+                        </b>
+                    </div>
+
+                    <div>
+                        📊
+                        <b>
+                            Mudança no padrão de consumo
+                        </b>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             MAPA
+        ====================================================== -->
+
+        <section id="mapa" class="pagina">
+
+            <div class="painel-box">
+
+                <div class="titulo-box">
+
+                    <div>
+
+                        <h2>
+                            🗺️ Mapa de Risco
+                        </h2>
+
+                        <p class="descricao-box">
+                            Visualização demonstrativa de níveis de atenção
+                        </p>
+
+                    </div>
+
+                    <span>
+                        SIMULAÇÃO
+                    </span>
+
+                </div>
+
+
+
+                <div class="mapa">
+
+
+                    <div class="regiao normal">
+
+                        <b>
+                            Norte
+                        </b>
+
+                        <span>
+                            🟢 Normal
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="regiao atencao">
+
+                        <b>
+                            Nordeste
+                        </b>
+
+                        <span>
+                            🟡 Atenção
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="regiao risco-mapa">
+
+                        <b>
+                            Centro-Oeste
+                        </b>
+
+                        <span>
+                            🟠 Risco
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="regiao normal">
+
+                        <b>
+                            Sudeste
+                        </b>
+
+                        <span>
+                            🟢 Normal
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="regiao critico">
+
+                        <b>
+                            Sul
+                        </b>
+
+                        <span>
+                            🔴 Crítico
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="regiao-selecionada">
+
+                    <div>
+
+                        <p class="subtitulo">
+                            REGIÃO SELECIONADA
+                        </p>
+
+                        <h3>
+                            Nordeste
+                        </h3>
+
+                    </div>
+
+
+
+                    <div class="indicadores">
+
+                        <span>
+                            💧 Disponibilidade ↓
+                        </span>
+
+                        <span>
+                            🌧️ Chuva ↓
+                        </span>
+
+                        <span>
+                            🚰 Consumo ↑
+                        </span>
+
+                        <span>
+                            📈 Tendência: atenção
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="risco-regiao">
+
+                        <b>
+                            Risco estimado:
+                        </b>
+
+                        <strong id="riscoMapa">
+                            MODERADO
+                        </strong>
+
+                    </div>
+
+
+                    <small>
+                        ⚠️ O mapa é demonstrativo e não representa
+                        uma previsão oficial de risco hídrico.
+                    </small>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             ALERTAS
+        ====================================================== -->
+
+        <section id="alertas" class="pagina">
+
+
+            <div id="alertaPrincipal"
+                class="alerta-principal">
+
+                <div class="icone-alerta">
+                    🚨
+                </div>
+
+
+                <div>
+
+                    <p class="subtitulo alerta-subtitulo">
+                        ALERTA 24
+                    </p>
+
+                    <h2 id="tituloAlerta">
+                        Alterações simultâneas detectadas
+                    </h2>
+
+                    <p id="descricaoAlerta">
+
+                        Foram identificadas alterações nos
+                        indicadores monitorados.
+
+                    </p>
+
+                    <b id="tendenciaAlerta">
+                        Tendência: aumento da atenção necessária.
+                    </b>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="duas-colunas">
+
+
+                <div class="painel-box">
+
+                    <h3>
+                        📋 Recomendação
+                    </h3>
+
+                    <p id="recomendacao">
+
+                        Realizar acompanhamento mais frequente
+                        dos dados e investigar possíveis alterações
+                        no consumo e na disponibilidade.
+
+                    </p>
+
+                </div>
+
+
+
+                <div class="painel-box">
+
+                    <h3>
+                        🎯 Objetivo do alerta
+                    </h3>
+
+                    <p>
+
+                        Emitir um sinal preventivo quando alterações
+                        relevantes forem identificadas, permitindo
+                        que uma investigação seja realizada antes
+                        que o problema possa se agravar.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="painel-box">
+
+                <h3>
+                    🔎 Histórico de eventos
+                </h3>
+
+
+                <div id="historicoAlertas"
+                    class="historico-alertas">
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             RODAPÉ
+        ====================================================== -->
+
+        <footer>
+
+            <b>ÁGUA 24</b>
+
+            • Detectar hoje para não faltar amanhã.
+
+            <br>
+
+            Protótipo acadêmico • Dados demonstrativos
+
+        </footer>
+
+    </main>
+
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
