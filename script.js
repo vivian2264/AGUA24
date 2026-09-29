@@ -1,987 +1,1534 @@
-// ============================================================
-// ÁGUA 24
-// Inteligência Hídrica e Alerta Preventivo
-// ============================================================
+/* =========================================================
+   ÁGUA 24
+   Inteligência Hídrica
+   ========================================================= */
 
 
-// ============================================================
-// DADOS INICIAIS DO PROTÓTIPO
-// ============================================================
+/* ================= APIs PÚBLICAS ================= */
 
-let dados = {
+const GEOCODING_API =
+    "https://geocoding-api.open-meteo.com/v1/search";
 
-    disponibilidade: 89,
+const WEATHER_API =
+    "https://api.open-meteo.com/v1/forecast";
 
-    chuva: 68,
+const FLOOD_API =
+    "https://flood-api.open-meteo.com/v1/flood";
 
-    consumo: 118,
 
-    nivel: 286,
+/* ================= CIDADE ATUAL ================= */
 
-    vazao: 42.8
+let cidadeAtual = {
+
+    nome: "Tianguá",
+
+    estado: "Ceará",
+
+    latitude: -3.7327,
+
+    longitude: -40.9917,
+
+    country: "Brasil"
 
 };
 
 
-// ============================================================
-// HISTÓRICO SIMULADO
-// ============================================================
+/* ================= REGIÕES ================= */
 
-let historicoConsumo = [
-    100,
-    101,
-    98,
-    103,
-    106,
-    108,
-    112,
-    118
-];
+const regioes = {
+
+    norte: [
+        "Acre",
+        "Amapá",
+        "Amazonas",
+        "Pará",
+        "Rondônia",
+        "Roraima",
+        "Tocantins"
+    ],
+
+    nordeste: [
+        "Alagoas",
+        "Bahia",
+        "Ceará",
+        "Maranhão",
+        "Paraíba",
+        "Pernambuco",
+        "Piauí",
+        "Rio Grande do Norte",
+        "Sergipe"
+    ],
+
+    "centro-oeste": [
+        "Goiás",
+        "Mato Grosso",
+        "Mato Grosso do Sul",
+        "Distrito Federal"
+    ],
+
+    sudeste: [
+        "Espírito Santo",
+        "Minas Gerais",
+        "Rio de Janeiro",
+        "São Paulo"
+    ],
+
+    sul: [
+        "Paraná",
+        "Rio Grande do Sul",
+        "Santa Catarina"
+    ]
+
+};
 
 
-let historicoAlertas = [
+/* ================= DADOS ================= */
 
-    {
-        icone: "⚠️",
-        titulo: "Aumento no consumo",
-        horario: "08:10",
-        descricao: "Consumo acima do padrão recente."
-    },
+let dadosAtuais = null;
 
-    {
-        icone: "🌧️",
-        titulo: "Chuva abaixo da referência",
-        horario: "07:45",
-        descricao: "Indicador utilizado na simulação."
-    },
+let graficoChuva = null;
 
-    {
-        icone: "💧",
-        titulo: "Disponibilidade monitorada",
-        horario: "07:20",
-        descricao: "Sistema realizou nova análise."
+let graficoVazao = null;
+
+
+/* ================= HISTÓRICO ================= */
+
+const HISTORY_KEY =
+    "agua24_historico";
+
+
+/* =========================================================
+   FUNÇÕES AUXILIARES
+   ========================================================= */
+
+function formatarNumero(valor, casas = 1) {
+
+    if (
+        valor === null ||
+        valor === undefined ||
+        Number.isNaN(Number(valor))
+    ) {
+        return "--";
     }
 
-];
-
-
-// ============================================================
-// INICIALIZAÇÃO
-// ============================================================
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        atualizarInterface();
-
-        criarGrafico();
-
-        atualizarHora();
-
-        mostrarHistoricoAlertas();
-
-    }
-);
-
-
-// ============================================================
-// TROCAR DE PÁGINA
-// ============================================================
-
-function abrirPagina(pagina, botao) {
-
-    // Esconde todas as páginas
-
-    document
-        .querySelectorAll(".pagina")
-        .forEach(function (elemento) {
-
-            elemento.classList.remove("ativa");
-
-        });
-
-
-    // Mostra a página escolhida
-
-    const paginaSelecionada =
-        document.getElementById(pagina);
-
-
-    if (paginaSelecionada) {
-
-        paginaSelecionada.classList.add("ativa");
-
-    }
-
-
-    // Remove active dos botões
-
-    document
-        .querySelectorAll(".menu")
-        .forEach(function (elemento) {
-
-            elemento.classList.remove("active");
-
-        });
-
-
-    // Ativa botão selecionado
-
-    if (botao) {
-
-        botao.classList.add("active");
-
-    }
-
-
-    // Títulos
-
-    const titulos = {
-
-        painel: "Painel",
-
-        tempo: "Dados em Tempo Real",
-
-        anomalias: "Detector de Anomalias",
-
-        mapa: "Mapa de Risco",
-
-        alertas: "Alertas 24"
-
-    };
-
-
-    document
-        .getElementById("tituloPagina")
-        .textContent = titulos[pagina];
+    return Number(valor).toFixed(casas);
 
 }
 
 
-// ============================================================
-// CÁLCULO DO RISCO
-// ============================================================
-
-function calcularRisco() {
-
-    let pontuacao = 0;
-
-
-    // --------------------------------------------------------
-    // DISPONIBILIDADE
-    // --------------------------------------------------------
-
-    if (dados.disponibilidade < 60) {
-
-        pontuacao += 35;
-
-    }
-
-    else if (dados.disponibilidade < 75) {
-
-        pontuacao += 27;
-
-    }
-
-    else if (dados.disponibilidade < 85) {
-
-        pontuacao += 18;
-
-    }
-
-    else {
-
-        pontuacao += 8;
-
-    }
-
-
-    // --------------------------------------------------------
-    // CHUVA
-    // --------------------------------------------------------
-
-    if (dados.chuva < 30) {
-
-        pontuacao += 30;
-
-    }
-
-    else if (dados.chuva < 50) {
-
-        pontuacao += 23;
-
-    }
-
-    else if (dados.chuva < 70) {
-
-        pontuacao += 15;
-
-    }
-
-    else {
-
-        pontuacao += 7;
-
-    }
-
-
-    // --------------------------------------------------------
-    // CONSUMO
-    // --------------------------------------------------------
-
-    if (dados.consumo > 140) {
-
-        pontuacao += 35;
-
-    }
-
-    else if (dados.consumo > 125) {
-
-        pontuacao += 30;
-
-    }
-
-    else if (dados.consumo > 110) {
-
-        pontuacao += 24;
-
-    }
-
-    else if (dados.consumo > 100) {
-
-        pontuacao += 12;
-
-    }
-
-    else {
-
-        pontuacao += 5;
-
-    }
-
-
-    // Garante máximo de 100
-
-    pontuacao =
-        Math.min(
-            Math.round(pontuacao),
-            100
-        );
-
-
-    let nivel;
-
-
-    if (pontuacao >= 80) {
-
-        nivel = "CRÍTICO";
-
-    }
-
-    else if (pontuacao >= 65) {
-
-        nivel = "ALTO";
-
-    }
-
-    else if (pontuacao >= 45) {
-
-        nivel = "MODERADO";
-
-    }
-
-    else {
-
-        nivel = "BAIXO";
-
-    }
-
-
-    return {
-
-        pontuacao: pontuacao,
-
-        nivel: nivel
-
-    };
+function limitar(valor, minimo, maximo) {
+
+    return Math.max(
+        minimo,
+        Math.min(maximo, valor)
+    );
 
 }
 
 
-// ============================================================
-// ATUALIZAR TODA A INTERFACE
-// ============================================================
+function mostrarLoading(mostrar) {
 
-function atualizarInterface() {
+    const loading =
+        document.getElementById("loading");
 
-    // Cards
+    if (!loading) return;
 
-    document
-        .getElementById("disponibilidade")
-        .textContent =
-        dados.disponibilidade + "%";
+    if (mostrar) {
 
+        loading.classList.add("show");
 
-    document
-        .getElementById("chuva")
-        .textContent =
-        dados.chuva + " mm";
+    } else {
 
-
-    document
-        .getElementById("consumo")
-        .textContent =
-        dados.consumo + "%";
-
-
-    document
-        .getElementById("nivel")
-        .textContent =
-        dados.nivel + " cm";
-
-
-    document
-        .getElementById("vazao")
-        .textContent =
-        dados.vazao
-            .toFixed(1)
-            .replace(".", ",")
-        + " m³/s";
-
-
-    document
-        .getElementById("chuvaTempo")
-        .textContent =
-        dados.chuva + " mm";
-
-
-    // Calcula risco
-
-    const resultado =
-        calcularRisco();
-
-
-    document
-        .getElementById("risco")
-        .textContent =
-        resultado.nivel;
-
-
-    document
-        .getElementById("pontuacao")
-        .textContent =
-        resultado.pontuacao + "/100";
-
-
-    document
-        .getElementById("riscoMapa")
-        .textContent =
-        resultado.nivel;
-
-
-    atualizarStatus(resultado);
-
-    atualizarMotivos();
-
-    atualizarAnomalia();
-
-    atualizarVariacoes();
-
-    atualizarAlerta(resultado);
-
-}
-
-
-// ============================================================
-// STATUS
-// ============================================================
-
-function atualizarStatus(resultado) {
-
-    const status =
-        document.getElementById("status");
-
-
-    if (resultado.nivel === "CRÍTICO") {
-
-        status.textContent =
-            "🔴 CRÍTICO";
-
-    }
-
-    else if (resultado.nivel === "ALTO") {
-
-        status.textContent =
-            "🟠 RISCO ALTO";
-
-    }
-
-    else if (resultado.nivel === "MODERADO") {
-
-        status.textContent =
-            "🟡 ATENÇÃO";
-
-    }
-
-    else {
-
-        status.textContent =
-            "🟢 NORMAL";
+        loading.classList.remove("show");
 
     }
 
 }
 
 
-// ============================================================
-// MOTIVOS DO RISCO
-// ============================================================
+function dataHoraAtual() {
 
-function atualizarMotivos() {
-
-    const container =
-        document.getElementById("motivos");
-
-
-    let motivos = [];
-
-
-    // Disponibilidade
-
-    if (dados.disponibilidade < 85) {
-
-        motivos.push({
-
-            titulo:
-                "Disponibilidade abaixo da referência",
-
-            texto:
-                "O indicador apresenta valor inferior ao parâmetro utilizado nesta simulação."
-
-        });
-
-    }
-
-
-    // Chuva
-
-    if (dados.chuva < 60) {
-
-        motivos.push({
-
-            titulo:
-                "Chuva abaixo da referência",
-
-            texto:
-                "O volume acumulado está abaixo do parâmetro utilizado pelo protótipo."
-
-        });
-
-    }
-
-
-    // Consumo
-
-    if (dados.consumo > 110) {
-
-        motivos.push({
-
-            titulo:
-                "Consumo acima do padrão",
-
-            texto:
-                "O consumo atual apresenta aumento em relação ao padrão de referência."
-
-        });
-
-    }
-
-
-    // Caso nenhum problema
-
-    if (motivos.length === 0) {
-
-        motivos.push({
-
-            titulo:
-                "Indicadores dentro da referência",
-
-            texto:
-                "Nenhuma alteração relevante foi identificada nesta análise."
-
-        });
-
-    }
-
-
-    container.innerHTML = "";
-
-
-    motivos.forEach(
-        function (motivo) {
-
-            const elemento =
-                document.createElement("div");
-
-
-            elemento.className =
-                "motivo";
-
-
-            elemento.innerHTML = `
-
-                <b>
-                    ${motivo.titulo}
-                </b>
-
-                <span>
-                    ${motivo.texto}
-                </span>
-
-            `;
-
-
-            container.appendChild(elemento);
-
+    return new Date().toLocaleTimeString(
+        "pt-BR",
+        {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
         }
     );
 
 }
 
 
-// ============================================================
-// DETECTOR DE ANOMALIAS
-// ============================================================
+/* =========================================================
+   NAVEGAÇÃO
+   ========================================================= */
 
-function atualizarAnomalia() {
+document
+    .querySelectorAll(".menu-item")
+    .forEach(item => {
 
-    const barraAtual =
-        document.getElementById("barraAtual");
+        item.addEventListener("click", () => {
 
+            const page =
+                item.dataset.page;
 
-    const valorAtual =
-        document.getElementById("valorAtual");
+            document
+                .querySelectorAll(".menu-item")
+                .forEach(menu => {
 
+                    menu.classList.remove("active");
 
-    const caixa =
-        document.getElementById("caixaAnomalia");
+                });
 
-
-    const texto =
-        document.getElementById("textoAnomalia");
-
-
-    // --------------------------------------------------------
-    // BARRA
-    // --------------------------------------------------------
-
-    let largura =
-        (dados.consumo / 150) * 100;
+            item.classList.add("active");
 
 
-    largura =
-        Math.min(
-            Math.max(largura, 5),
-            100
-        );
+            document
+                .querySelectorAll(".page")
+                .forEach(section => {
+
+                    section.classList.remove(
+                        "active-page"
+                    );
+
+                });
 
 
-    barraAtual.style.width =
-        largura + "%";
+            const target =
+                document.getElementById(
+                    `page-${page}`
+                );
 
 
-    valorAtual.textContent =
-        dados.consumo + "%";
+            if (target) {
+
+                target.classList.add(
+                    "active-page"
+                );
+
+            }
+
+        });
+
+    });
 
 
-    // --------------------------------------------------------
-    // DIFERENÇA
-    // --------------------------------------------------------
+/* =========================================================
+   REGIÃO
+   ========================================================= */
 
-    let diferenca =
-        dados.consumo - 100;
+document
+    .getElementById("select-regiao")
+    .addEventListener("change", function () {
+
+        const regiao =
+            this.value;
+
+        if (regiao === "todas") {
+
+            return;
+
+        }
+
+        const estados =
+            regioes[regiao];
+
+        if (!estados) return;
+
+        const estadoAtual =
+            cidadeAtual.estado;
+
+        if (!estados.includes(estadoAtual)) {
+
+            document.getElementById(
+                "cidade-input"
+            ).value = "";
+
+        }
+
+    });
 
 
-    // --------------------------------------------------------
-    // ANOMALIA
-    // --------------------------------------------------------
+/* =========================================================
+   GEOCODIFICAÇÃO
+   ========================================================= */
 
-    if (diferenca > 10) {
+async function buscarCidade() {
 
-        caixa.classList.remove("normal");
+    const input =
+        document.getElementById("cidade-input");
 
-
-        texto.textContent =
-            "O consumo está " +
-            diferenca +
-            "% acima do padrão de referência. O sistema recomenda investigar a alteração antes de assumir uma causa.";
-
-    }
-
-    else {
-
-        caixa.classList.add("normal");
-
-
-        texto.textContent =
-            "O consumo permanece próximo do padrão de referência utilizado pelo protótipo.";
-
-    }
-
-}
-
-
-// ============================================================
-// VARIAÇÕES DOS CARDS
-// ============================================================
-
-function atualizarVariacoes() {
-
-    const disponibilidade =
+    const resultados =
         document.getElementById(
-            "variacaoDisponibilidade"
+            "resultados-cidade"
         );
 
+    const nome =
+        input.value.trim();
 
-    const chuva =
-        document.getElementById(
-            "variacaoChuva"
-        );
 
+    if (!nome) {
 
-    const consumo =
-        document.getElementById(
-            "variacaoConsumo"
-        );
-
-
-    disponibilidade.textContent =
-        dados.disponibilidade < 100
-            ? "↓ " +
-              (100 - dados.disponibilidade) +
-              "%"
-            : "Estável";
-
-
-    chuva.textContent =
-        dados.chuva < 100
-            ? "↓ " +
-              (100 - dados.chuva) +
-              "%"
-            : "↑ acima da referência";
-
-
-    consumo.textContent =
-        dados.consumo > 100
-            ? "↑ " +
-              (dados.consumo - 100) +
-              "%"
-            : "Dentro do padrão";
-
-}
-
-
-// ============================================================
-// ATUALIZAÇÃO DOS DADOS
-// ============================================================
-
-function atualizarDados(mostrarMensagem = false) {
-
-    /*
-        IMPORTANTE:
-
-        Os números desta versão são simulados.
-
-        Esta função representa a entrada de novos dados
-        que futuramente poderiam vir de sensores,
-        estações ou APIs.
-    */
-
-
-    // --------------------------------------------------------
-    // PEQUENAS VARIAÇÕES
-    // --------------------------------------------------------
-
-    dados.disponibilidade =
-        limitar(
-            dados.disponibilidade +
-            numeroAleatorio(-2, 1),
-            50,
-            100
-        );
-
-
-    dados.chuva =
-        limitar(
-            dados.chuva +
-            numeroAleatorio(-4, 4),
-            0,
-            150
-        );
-
-
-    dados.consumo =
-        limitar(
-            dados.consumo +
-            numeroAleatorio(-3, 6),
-            80,
-            160
-        );
-
-
-    dados.nivel =
-        limitar(
-            dados.nivel +
-            numeroAleatorio(-5, 3),
-            100,
-            500
-        );
-
-
-    dados.vazao =
-        Math.max(
-            5,
-            dados.vazao +
-            (Math.random() * 3 - 1.5)
-        );
-
-
-    // --------------------------------------------------------
-    // ADICIONA AO HISTÓRICO
-    // --------------------------------------------------------
-
-    historicoConsumo.push(
-        dados.consumo
-    );
-
-
-    if (historicoConsumo.length > 12) {
-
-        historicoConsumo.shift();
-
-    }
-
-
-    // --------------------------------------------------------
-    // ATUALIZA INTERFACE
-    // --------------------------------------------------------
-
-    atualizarInterface();
-
-    atualizarHora();
-
-    atualizarGrafico();
-
-
-    // --------------------------------------------------------
-    // REGISTRA EVENTO
-    // --------------------------------------------------------
-
-    const resultado =
-        calcularRisco();
-
-
-    registrarEvento(resultado);
-
-
-    // --------------------------------------------------------
-    // FEEDBACK
-    // --------------------------------------------------------
-
-    if (mostrarMensagem) {
-
-        const botao =
-            document.querySelector(".atualizar");
-
-
-        const textoOriginal =
-            botao.textContent;
-
-
-        botao.textContent =
-            "✓ Atualizado";
-
-
-        setTimeout(
-            function () {
-
-                botao.textContent =
-                    textoOriginal;
-
-            },
-            1000
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// HORA
-// ============================================================
-
-function atualizarHora() {
-
-    const agora =
-        new Date();
-
-
-    const horas =
-        String(
-            agora.getHours()
-        ).padStart(2, "0");
-
-
-    const minutos =
-        String(
-            agora.getMinutes()
-        ).padStart(2, "0");
-
-
-    const segundos =
-        String(
-            agora.getSeconds()
-        ).padStart(2, "0");
-
-
-    const hora =
-        horas +
-        ":" +
-        minutos +
-        ":" +
-        segundos;
-
-
-    const elemento =
-        document.getElementById("hora");
-
-
-    const elementoTempo =
-        document.getElementById("horaTempo");
-
-
-    if (elemento) {
-
-        elemento.textContent =
-            hora;
-
-    }
-
-
-    if (elementoTempo) {
-
-        elementoTempo.textContent =
-            hora;
-
-    }
-
-}
-
-
-// ============================================================
-// NÚMERO ALEATÓRIO
-// ============================================================
-
-function numeroAleatorio(min, max) {
-
-    return Math.floor(
-        Math.random() *
-        (max - min + 1)
-    ) + min;
-
-}
-
-
-// ============================================================
-// LIMITADOR
-// ============================================================
-
-function limitar(
-    valor,
-    minimo,
-    maximo
-) {
-
-    return Math.max(
-        minimo,
-        Math.min(
-            valor,
-            maximo
-        )
-    );
-
-}
-
-
-// ============================================================
-// GRÁFICO
-// ============================================================
-
-let grafico = null;
-
-
-function criarGrafico() {
-
-    const canvas =
-        document.getElementById(
-            "grafico"
-        );
-
-
-    if (!canvas) {
+        resultados.innerHTML =
+            "<div class='city-result'>Digite uma cidade.</div>";
 
         return;
 
     }
 
 
-    const contexto =
-        canvas.getContext("2d");
+    resultados.innerHTML =
+        "<div class='city-result'>Buscando...</div>";
 
 
-    grafico =
+    try {
+
+        const url =
+            `${GEOCODING_API}?name=${encodeURIComponent(nome)}` +
+            `&count=8&language=pt&format=json`;
+
+
+        const resposta =
+            await fetch(url);
+
+
+        if (!resposta.ok) {
+
+            throw new Error(
+                "Erro na busca da cidade."
+            );
+
+        }
+
+
+        const data =
+            await resposta.json();
+
+
+        resultados.innerHTML = "";
+
+
+        if (
+            !data.results ||
+            data.results.length === 0
+        ) {
+
+            resultados.innerHTML =
+                "<div class='city-result'>Nenhuma cidade encontrada.</div>";
+
+            return;
+
+        }
+
+
+        const regiaoSelecionada =
+            document.getElementById(
+                "select-regiao"
+            ).value;
+
+
+        let cidades =
+            data.results;
+
+
+        if (
+            regiaoSelecionada !== "todas"
+        ) {
+
+            const estadosPermitidos =
+                regioes[regiaoSelecionada];
+
+
+            cidades =
+                cidades.filter(cidade => {
+
+                    return estadosPermitidos.includes(
+                        cidade.admin1
+                    );
+
+                });
+
+        }
+
+
+        if (cidades.length === 0) {
+
+            resultados.innerHTML =
+                "<div class='city-result'>Nenhuma cidade encontrada nessa região.</div>";
+
+            return;
+
+        }
+
+
+        cidades.forEach(cidade => {
+
+            const div =
+                document.createElement("div");
+
+
+            div.className =
+                "city-result";
+
+
+            const estado =
+                cidade.admin1 || "";
+
+
+            const pais =
+                cidade.country || "";
+
+
+            div.textContent =
+                `${cidade.name}${estado ? ", " + estado : ""}${pais ? " — " + pais : ""}`;
+
+
+            div.addEventListener(
+                "click",
+                () => {
+
+                    selecionarCidade(cidade);
+
+                }
+            );
+
+
+            resultados.appendChild(div);
+
+        });
+
+
+    } catch (erro) {
+
+        console.error(erro);
+
+        resultados.innerHTML =
+            "<div class='city-result'>Não foi possível consultar a cidade.</div>";
+
+    }
+
+}
+
+
+function selecionarCidade(cidade) {
+
+    cidadeAtual = {
+
+        nome:
+            cidade.name,
+
+        estado:
+            cidade.admin1 || "",
+
+        latitude:
+            Number(cidade.latitude),
+
+        longitude:
+            Number(cidade.longitude),
+
+        country:
+            cidade.country || "Brasil"
+
+    };
+
+
+    document.getElementById(
+        "cidade-input"
+    ).value =
+        cidadeAtual.nome;
+
+
+    document.getElementById(
+        "resultados-cidade"
+    ).innerHTML = "";
+
+
+    atualizarLocalizacao();
+
+
+    carregarDados();
+
+}
+
+
+/* =========================================================
+   ATUALIZAR LOCALIZAÇÃO
+   ========================================================= */
+
+function atualizarLocalizacao() {
+
+    document.getElementById(
+        "local-atual"
+    ).textContent =
+        `${cidadeAtual.nome}, ${cidadeAtual.estado}`;
+
+
+    document.getElementById(
+        "coordenadas"
+    ).textContent =
+        `Lat: ${formatarNumero(cidadeAtual.latitude, 4)} | Lon: ${formatarNumero(cidadeAtual.longitude, 4)}`;
+
+
+    document.getElementById(
+        "mapa-cidade"
+    ).textContent =
+        `${cidadeAtual.nome}, ${cidadeAtual.estado}`;
+
+}
+
+
+/* =========================================================
+   API METEOROLÓGICA
+   ========================================================= */
+
+async function buscarMeteorologia() {
+
+    const lat =
+        cidadeAtual.latitude;
+
+    const lon =
+        cidadeAtual.longitude;
+
+
+    const url =
+        `${WEATHER_API}?latitude=${lat}` +
+        `&longitude=${lon}` +
+        `&current=temperature_2m,relative_humidity_2m,precipitation,rain` +
+        `&hourly=temperature_2m,relative_humidity_2m,precipitation,et0_fao_evapotranspiration` +
+        `&past_days=1` +
+        `&forecast_days=2` +
+        `&timezone=auto`;
+
+
+    const resposta =
+        await fetch(url);
+
+
+    if (!resposta.ok) {
+
+        throw new Error(
+            "Falha na API meteorológica."
+        );
+
+    }
+
+
+    return await resposta.json();
+
+}
+
+
+/* =========================================================
+   API HIDROLÓGICA
+   ========================================================= */
+
+async function buscarHidrologia() {
+
+    const lat =
+        cidadeAtual.latitude;
+
+    const lon =
+        cidadeAtual.longitude;
+
+
+    const url =
+        `${FLOOD_API}?latitude=${lat}` +
+        `&longitude=${lon}` +
+        `&daily=river_discharge` +
+        `&past_days=7` +
+        `&forecast_days=7`;
+
+
+    const resposta =
+        await fetch(url);
+
+
+    if (!resposta.ok) {
+
+        throw new Error(
+            "Falha na API hidrológica."
+        );
+
+    }
+
+
+    return await resposta.json();
+
+}
+
+
+/* =========================================================
+   CARREGAR DADOS
+   ========================================================= */
+
+async function carregarDados() {
+
+    mostrarLoading(true);
+
+
+    try {
+
+        const [
+            meteorologia,
+            hidrologia
+        ] = await Promise.all([
+
+            buscarMeteorologia(),
+
+            buscarHidrologia()
+
+        ]);
+
+
+        dadosAtuais =
+            processarDados(
+                meteorologia,
+                hidrologia
+            );
+
+
+        atualizarInterface(
+            dadosAtuais
+        );
+
+
+        document.getElementById(
+            "ultima-atualizacao"
+        ).textContent =
+            dataHoraAtual();
+
+
+        atualizarStatusAPI(true);
+
+
+        salvarHistorico(
+            dadosAtuais
+        );
+
+
+    } catch (erro) {
+
+        console.error(erro);
+
+        atualizarStatusAPI(false);
+
+        mostrarErroAPI();
+
+    } finally {
+
+        mostrarLoading(false);
+
+    }
+
+}
+
+
+/* =========================================================
+   PROCESSAMENTO
+   ========================================================= */
+
+function processarDados(
+    meteorologia,
+    hidrologia
+) {
+
+    const current =
+        meteorologia.current || {};
+
+
+    const hourly =
+        meteorologia.hourly || {};
+
+
+    const daily =
+        hidrologia.daily || {};
+
+
+    const precipitacoes =
+        hourly.precipitation || [];
+
+
+    const et0Dados =
+        hourly.et0_fao_evapotranspiration || [];
+
+
+    const vazoes =
+        daily.river_discharge || [];
+
+
+    /* ---------- CHUVA 24H ---------- */
+
+    const ultimas24 =
+        precipitacoes.slice(-24);
+
+
+    const chuva24 =
+        ultimas24.reduce(
+            (total, valor) =>
+                total + (Number(valor) || 0),
+            0
+        );
+
+
+    /* ---------- EVAPOTRANSPIRAÇÃO ---------- */
+
+    const et0Ultimas24 =
+        et0Dados.slice(-24);
+
+
+    const et0 =
+        et0Ultimas24.reduce(
+            (total, valor) =>
+                total + (Number(valor) || 0),
+            0
+        );
+
+
+    /* ---------- VAZÃO ---------- */
+
+    const vazaoNumerica =
+        vazoes
+            .map(Number)
+            .filter(
+                valor =>
+                    Number.isFinite(valor)
+            );
+
+
+    let vazaoAtual =
+        vazaoNumerica.length
+            ? vazaoNumerica[0]
+            : 0;
+
+
+    let vazaoHistorica = 0;
+
+
+    if (vazaoNumerica.length > 1) {
+
+        const referencia =
+            vazaoNumerica.slice(1, 8);
+
+
+        vazaoHistorica =
+            referencia.reduce(
+                (total, valor) =>
+                    total + valor,
+                0
+            ) / referencia.length;
+
+    } else {
+
+        vazaoHistorica =
+            vazaoAtual;
+
+    }
+
+
+    if (
+        !Number.isFinite(vazaoHistorica) ||
+        vazaoHistorica <= 0
+    ) {
+
+        vazaoHistorica =
+            vazaoAtual || 1;
+
+    }
+
+
+    /* ---------- METEOROLOGIA ---------- */
+
+    const temperatura =
+        Number(
+            current.temperature_2m
+        ) || 0;
+
+
+    const umidade =
+        Number(
+            current.relative_humidity_2m
+        ) || 0;
+
+
+    const precipitacao =
+        Number(
+            current.precipitation
+        ) || 0;
+
+
+    /* ---------- DEMANDA ESTIMADA ---------- */
+
+    let demanda = 100;
+
+
+    demanda +=
+        et0 * 4;
+
+
+    if (umidade < 50) {
+
+        demanda += 10;
+
+    }
+
+
+    if (temperatura > 30) {
+
+        demanda += 10;
+
+    }
+
+
+    demanda =
+        limitar(
+            demanda,
+            0,
+            150
+        );
+
+
+    /* ---------- DISPONIBILIDADE ---------- */
+
+    let disponibilidade = 70;
+
+
+    if (chuva24 > 20) {
+
+        disponibilidade += 10;
+
+    }
+
+
+    if (chuva24 < 2) {
+
+        disponibilidade -= 10;
+
+    }
+
+
+    if (
+        vazaoAtual >
+        vazaoHistorica
+    ) {
+
+        disponibilidade += 10;
+
+    }
+
+
+    if (
+        vazaoAtual <
+        vazaoHistorica * 0.8
+    ) {
+
+        disponibilidade -= 15;
+
+    }
+
+
+    disponibilidade =
+        limitar(
+            disponibilidade,
+            0,
+            100
+        );
+
+
+    /* ---------- RISCO ---------- */
+
+    let risco =
+        100 - disponibilidade;
+
+
+    if (demanda > 110) {
+
+        risco +=
+            (demanda - 110) * 0.3;
+
+    }
+
+
+    if (
+        vazaoAtual <
+        vazaoHistorica * 0.7
+    ) {
+
+        risco += 15;
+
+    }
+
+
+    risco =
+        limitar(
+            risco,
+            0,
+            100
+        );
+
+
+    /* ---------- ANOMALIA ---------- */
+
+    let anomalia = 0;
+
+
+    if (
+        vazaoAtual <
+        vazaoHistorica * 0.7
+    ) {
+
+        anomalia += 50;
+
+    }
+
+
+    if (chuva24 < 2) {
+
+        anomalia += 20;
+
+    }
+
+
+    if (demanda > 115) {
+
+        anomalia += 30;
+
+    }
+
+
+    anomalia =
+        limitar(
+            anomalia,
+            0,
+            100
+        );
+
+
+    const resultado = {
+
+        temperatura,
+
+        umidade,
+
+        precipitacao,
+
+        chuva24,
+
+        et0,
+
+        vazaoAtual,
+
+        vazaoHistorica,
+
+        demanda,
+
+        disponibilidade,
+
+        risco,
+
+        anomalia
+
+    };
+
+
+    resultado.possivelCausa =
+        identificarPossiveisCausas(
+            resultado
+        );
+
+
+    return resultado;
+
+}
+
+
+/* =========================================================
+   POSSÍVEIS CAUSAS
+   ========================================================= */
+
+function identificarPossiveisCausas(d) {
+
+    const causas = [];
+
+
+    if (d.chuva24 < 2) {
+
+        causas.push(
+            "baixa precipitação nas últimas 24 horas"
+        );
+
+    }
+
+
+    if (d.et0 > 4) {
+
+        causas.push(
+            "evapotranspiração elevada"
+        );
+
+    }
+
+
+    if (d.temperatura > 30) {
+
+        causas.push(
+            "temperatura elevada"
+        );
+
+    }
+
+
+    if (d.umidade < 50) {
+
+        causas.push(
+            "baixa umidade do ar"
+        );
+
+    }
+
+
+    if (
+        d.vazaoAtual <
+        d.vazaoHistorica * 0.7
+    ) {
+
+        causas.push(
+            "vazão abaixo da referência dos últimos dias"
+        );
+
+    }
+
+
+    if (d.demanda > 115) {
+
+        causas.push(
+            "índice de demanda estimada elevado"
+        );
+
+    }
+
+
+    if (causas.length === 0) {
+
+        return (
+            "Nenhum fator de pressão significativo foi identificado pelos indicadores atuais."
+        );
+
+    }
+
+
+    return (
+        "Possíveis fatores associados: " +
+        causas.join(", ") +
+        "."
+    );
+
+}
+
+
+/* =========================================================
+   ATUALIZAR INTERFACE
+   ========================================================= */
+
+function atualizarInterface(d) {
+
+    /* ---------- CARDS ---------- */
+
+    document.getElementById(
+        "disponibilidade"
+    ).textContent =
+        `${formatarNumero(d.disponibilidade, 0)}%`;
+
+
+    document.getElementById(
+        "disponibilidade-var"
+    ).textContent =
+        "Índice calculado";
+
+
+    document.getElementById(
+        "chuva"
+    ).textContent =
+        `${formatarNumero(d.chuva24, 1)} mm`;
+
+
+    document.getElementById(
+        "chuva-var"
+    ).textContent =
+        "Últimas 24 horas";
+
+
+    document.getElementById(
+        "demanda"
+    ).textContent =
+        `${formatarNumero(d.demanda, 0)}%`;
+
+
+    document.getElementById(
+        "demanda-var"
+    ).textContent =
+        "Índice estimado";
+
+
+    document.getElementById(
+        "risco"
+    ).textContent =
+        `${formatarNumero(d.risco, 0)}/100`;
+
+
+    document.getElementById(
+        "risco-status"
+    ).textContent =
+        classificarRisco(d.risco);
+
+
+    /* ---------- TEMPO REAL ---------- */
+
+    document.getElementById(
+        "tempo-temperatura"
+    ).textContent =
+        `${formatarNumero(d.temperatura, 1)} °C`;
+
+
+    document.getElementById(
+        "tempo-umidade"
+    ).textContent =
+        `${formatarNumero(d.umidade, 0)} %`;
+
+
+    document.getElementById(
+        "tempo-chuva"
+    ).textContent =
+        `${formatarNumero(d.precipitacao, 1)} mm`;
+
+
+    document.getElementById(
+        "tempo-et0"
+    ).textContent =
+        `${formatarNumero(d.et0, 1)} mm`;
+
+
+    document.getElementById(
+        "tempo-vazao"
+    ).textContent =
+        `${formatarNumero(d.vazaoAtual, 2)} m³/s`;
+
+
+    document.getElementById(
+        "tempo-vazao-ref"
+    ).textContent =
+        `${formatarNumero(d.vazaoHistorica, 2)} m³/s`;
+
+
+    /* ---------- ALERTA ---------- */
+
+    const nivel =
+        classificarRisco(d.risco);
+
+
+    document.getElementById(
+        "alerta-titulo"
+    ).textContent =
+        `Nível de risco: ${nivel}`;
+
+
+    document.getElementById(
+        "alerta-texto"
+    ).textContent =
+        gerarTextoAlerta(d);
+
+
+    document.getElementById(
+        "alerta-causa"
+    ).textContent =
+        d.possivelCausa;
+
+
+    /* ---------- ANOMALIA ---------- */
+
+    document.getElementById(
+        "anomalia-score"
+    ).textContent =
+        formatarNumero(
+            d.anomalia,
+            0
+        );
+
+
+    document.getElementById(
+        "anomalia-titulo"
+    ).textContent =
+        d.anomalia >= 50
+            ? "Anomalia detectada"
+            : "Sem anomalia crítica";
+
+
+    document.getElementById(
+        "anomalia-descricao"
+    ).textContent =
+        gerarTextoAnomalia(d);
+
+
+    document.getElementById(
+        "anomalia-causa"
+    ).textContent =
+        d.possivelCausa;
+
+
+    /* ---------- MAPA ---------- */
+
+    document.getElementById(
+        "mapa-cidade"
+    ).textContent =
+        `${cidadeAtual.nome}, ${cidadeAtual.estado}`;
+
+
+    document.getElementById(
+        "mapa-detalhes"
+    ).textContent =
+        `Disponibilidade estimada de ${formatarNumero(d.disponibilidade, 0)}%, risco ${formatarNumero(d.risco, 0)}/100 e índice de anomalia de ${formatarNumero(d.anomalia, 0)}/100.`;
+
+
+    /* ---------- ALERTAS 24 ---------- */
+
+    document.getElementById(
+        "alerta24-titulo"
+    ).textContent =
+        `Risco ${classificarRisco(d.risco)}`;
+
+
+    document.getElementById(
+        "alerta24-texto"
+    ).textContent =
+        gerarTextoAlerta(d);
+
+
+    document.getElementById(
+        "alerta24-causa"
+    ).textContent =
+        d.possivelCausa;
+
+
+    /* ---------- TABELA ---------- */
+
+    atualizarTabelaAnomalias(d);
+
+
+    /* ---------- GRÁFICOS ---------- */
+
+    atualizarGraficos();
+
+}
+
+
+/* =========================================================
+   CLASSIFICAÇÃO
+   ========================================================= */
+
+function classificarRisco(risco) {
+
+    if (risco < 30) {
+
+        return "BAIXO";
+
+    }
+
+
+    if (risco < 60) {
+
+        return "MODERADO";
+
+    }
+
+
+    if (risco < 80) {
+
+        return "ALTO";
+
+    }
+
+
+    return "CRÍTICO";
+
+}
+
+
+/* =========================================================
+   TEXTOS
+   ========================================================= */
+
+function gerarTextoAlerta(d) {
+
+    if (d.risco >= 80) {
+
+        return (
+            "Os indicadores combinados apontam para uma condição de risco elevado. Recomenda-se atenção às alterações observadas."
+        );
+
+    }
+
+
+    if (d.risco >= 60) {
+
+        return (
+            "Os indicadores apresentam sinais que merecem acompanhamento preventivo para evitar agravamento das condições hídricas."
+        );
+
+    }
+
+
+    if (d.risco >= 30) {
+
+        return (
+            "Os indicadores apresentam uma condição intermediária. O sistema continuará monitorando possíveis alterações."
+        );
+
+    }
+
+
+    return (
+        "Os indicadores atuais não apresentam pressão hídrica significativa."
+    );
+
+}
+
+
+function gerarTextoAnomalia(d) {
+
+    if (d.anomalia >= 70) {
+
+        return (
+            "Foram identificadas alterações relevantes em relação aos indicadores utilizados pelo sistema."
+        );
+
+    }
+
+
+    if (d.anomalia >= 40) {
+
+        return (
+            "Foram identificados sinais de alteração que devem continuar sendo acompanhados."
+        );
+
+    }
+
+
+    return (
+        "Os indicadores atuais não apresentam uma anomalia relevante."
+    );
+
+}
+
+
+/* =========================================================
+   TABELA DE ANOMALIAS
+   ========================================================= */
+
+function atualizarTabelaAnomalias(d) {
+
+    const tabela =
+        document.getElementById(
+            "tabela-anomalias"
+        );
+
+
+    const vazaoPercentual =
+        d.vazaoHistorica > 0
+            ? (
+                d.vazaoAtual /
+                d.vazaoHistorica
+            ) * 100
+            : 100;
+
+
+    const linhas = [
+
+        [
+            "Chuva 24h",
+            `${formatarNumero(d.chuva24, 1)} mm`,
+            "≥ 2 mm",
+            d.chuva24 < 2
+                ? "Atenção"
+                : "Normal"
+        ],
+
+        [
+            "Vazão",
+            `${formatarNumero(d.vazaoAtual, 2)} m³/s`,
+            `${formatarNumero(d.vazaoHistorica, 2)} m³/s`,
+            vazaoPercentual < 70
+                ? "Atenção"
+                : "Normal"
+        ],
+
+        [
+            "Demanda",
+            `${formatarNumero(d.demanda, 0)}%`,
+            "≤ 115%",
+            d.demanda > 115
+                ? "Atenção"
+                : "Normal"
+        ],
+
+        [
+            "Risco",
+            `${formatarNumero(d.risco, 0)}/100`,
+            "< 60",
+            d.risco >= 60
+                ? "Atenção"
+                : "Normal"
+        ]
+
+    ];
+
+
+    tabela.innerHTML =
+        linhas.map(linha => {
+
+            const status =
+                linha[3];
+
+            const classe =
+                status === "Normal"
+                    ? "status-normal"
+                    : "status-attention";
+
+
+            return `
+                <tr>
+
+                    <td>${linha[0]}</td>
+
+                    <td>${linha[1]}</td>
+
+                    <td>${linha[2]}</td>
+
+                    <td class="${classe}">
+                        ${status}
+                    </td>
+
+                </tr>
+            `;
+
+        }).join("");
+
+}
+
+
+/* =========================================================
+   GRÁFICOS
+   ========================================================= */
+
+function atualizarGraficos() {
+
+    if (!dadosAtuais) return;
+
+
+    const labels = [
+
+        "24h",
+        "18h",
+        "12h",
+        "6h",
+        "Agora"
+
+    ];
+
+
+    const chuvaBase =
+        Math.max(
+            0,
+            dadosAtuais.chuva24 / 5
+        );
+
+
+    const chuvaData = [
+
+        chuvaBase * 0.8,
+
+        chuvaBase * 1.1,
+
+        chuvaBase * 0.7,
+
+        chuvaBase * 1.2,
+
+        dadosAtuais.precipitacao
+
+    ];
+
+
+    const vazaoBase =
+        dadosAtuais.vazaoHistorica;
+
+
+    const vazaoData = [
+
+        vazaoBase * 0.95,
+
+        vazaoBase * 1.03,
+
+        vazaoBase * 0.98,
+
+        vazaoBase * 0.91,
+
+        dadosAtuais.vazaoAtual
+
+    ];
+
+
+    const chuvaCanvas =
+        document.getElementById(
+            "grafico-chuva"
+        );
+
+
+    const vazaoCanvas =
+        document.getElementById(
+            "grafico-vazao"
+        );
+
+
+    if (graficoChuva) {
+
+        graficoChuva.destroy();
+
+    }
+
+
+    if (graficoVazao) {
+
+        graficoVazao.destroy();
+
+    }
+
+
+    graficoChuva =
         new Chart(
-            contexto,
+            chuvaCanvas,
             {
 
                 type: "line",
 
                 data: {
 
-                    labels: [
-                        "D1",
-                        "D2",
-                        "D3",
-                        "D4",
-                        "D5",
-                        "D6",
-                        "D7",
-                        "Atual"
-                    ],
+                    labels,
 
                     datasets: [
 
                         {
+                            label: "Precipitação",
 
-                            label:
-                                "Consumo relativo (%)",
+                            data: chuvaData,
 
-                            data:
-                                historicoConsumo,
+                            borderColor:
+                                "#19a7e0",
 
-                            borderWidth:
-                                3,
+                            backgroundColor:
+                                "rgba(25,167,224,0.12)",
 
-                            tension:
-                                0.3,
+                            fill: true,
 
-                            fill:
-                                false,
-
-                            pointRadius:
-                                4
+                            tension: 0.35
 
                         }
 
@@ -993,32 +1540,128 @@ function criarGrafico() {
 
                     responsive: true,
 
-                    maintainAspectRatio:
-                        false,
+                    maintainAspectRatio: false,
 
                     plugins: {
 
                         legend: {
-
-                            display:
-                                true
-
+                            display: false
                         }
 
                     },
 
                     scales: {
 
+                        x: {
+                            ticks: {
+                                color: "#7f99ad"
+                            },
+
+                            grid: {
+                                color:
+                                    "rgba(27,58,81,0.35)"
+                            }
+                        },
+
                         y: {
 
-                            beginAtZero:
-                                false,
+                            beginAtZero: true,
 
-                            suggestedMin:
-                                80,
+                            ticks: {
+                                color: "#7f99ad"
+                            },
 
-                            suggestedMax:
-                                150
+                            grid: {
+                                color:
+                                    "rgba(27,58,81,0.35)"
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+
+    graficoVazao =
+        new Chart(
+            vazaoCanvas,
+            {
+
+                type: "line",
+
+                data: {
+
+                    labels,
+
+                    datasets: [
+
+                        {
+
+                            label: "Vazão",
+
+                            data: vazaoData,
+
+                            borderColor:
+                                "#31d49b",
+
+                            backgroundColor:
+                                "rgba(49,212,155,0.10)",
+
+                            fill: true,
+
+                            tension: 0.35
+
+                        }
+
+                    ]
+
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+                    plugins: {
+
+                        legend: {
+                            display: false
+                        }
+
+                    },
+
+                    scales: {
+
+                        x: {
+
+                            ticks: {
+                                color: "#7f99ad"
+                            },
+
+                            grid: {
+                                color:
+                                    "rgba(27,58,81,0.35)"
+                            }
+
+                        },
+
+                        y: {
+
+                            beginAtZero: true,
+
+                            ticks: {
+                                color: "#7f99ad"
+                            },
+
+                            grid: {
+                                color:
+                                    "rgba(27,58,81,0.35)"
+                            }
 
                         }
 
@@ -1032,354 +1675,474 @@ function criarGrafico() {
 }
 
 
-// ============================================================
-// ATUALIZAR GRÁFICO
-// ============================================================
+/* =========================================================
+   STATUS DAS APIs
+   ========================================================= */
 
-function atualizarGrafico() {
+function atualizarStatusAPI(online) {
 
-    if (!grafico) {
-
-        return;
-
-    }
-
-
-    grafico.data.labels =
-        historicoConsumo.map(
-            function (_, indice) {
-
-                return "D" +
-                    (indice + 1);
-
-            }
+    const status =
+        document.querySelector(
+            ".api-status strong"
         );
 
 
-    grafico.data.datasets[0].data =
-        historicoConsumo;
-
-
-    grafico.update();
-
-}
-
-
-// ============================================================
-// ALERTAS
-// ============================================================
-
-function atualizarAlerta(resultado) {
-
-    const alerta =
-        document.getElementById(
-            "alertaPrincipal"
+    const texto =
+        document.querySelector(
+            ".api-status small"
         );
 
 
-    const titulo =
-        document.getElementById(
-            "tituloAlerta"
-        );
+    if (!status || !texto) return;
 
 
-    const descricao =
-        document.getElementById(
-            "descricaoAlerta"
-        );
+    if (online) {
 
+        status.textContent =
+            "API ONLINE";
 
-    const tendencia =
-        document.getElementById(
-            "tendenciaAlerta"
-        );
+        texto.textContent =
+            "Open-Meteo + GloFAS";
 
+    } else {
 
-    const recomendacao =
-        document.getElementById(
-            "recomendacao"
-        );
+        status.textContent =
+            "API OFFLINE";
 
-
-    if (
-        resultado.nivel === "CRÍTICO" ||
-        resultado.nivel === "ALTO"
-    ) {
-
-        alerta.classList.remove(
-            "normal"
-        );
-
-
-        titulo.textContent =
-            "Alterações relevantes detectadas";
-
-
-        descricao.textContent =
-            "Os indicadores analisados apresentam alterações que elevaram o nível de atenção do sistema.";
-
-
-        tendencia.textContent =
-            "Tendência: atenção elevada.";
-
-
-        recomendacao.textContent =
-            "Acompanhar os indicadores com maior frequência e investigar as alterações identificadas, sem assumir previamente uma causa.";
-
-    }
-
-    else {
-
-        alerta.classList.add(
-            "normal"
-        );
-
-
-        titulo.textContent =
-            "Monitoramento preventivo ativo";
-
-
-        descricao.textContent =
-            "O sistema continua acompanhando os indicadores em busca de alterações relevantes.";
-
-
-        tendencia.textContent =
-            "Tendência: monitoramento contínuo.";
-
-
-        recomendacao.textContent =
-            "Manter o acompanhamento dos dados e observar mudanças no padrão de consumo e disponibilidade.";
+        texto.textContent =
+            "Verifique a conexão";
 
     }
 
 }
 
 
-// ============================================================
-// REGISTRAR EVENTO
-// ============================================================
+function mostrarErroAPI() {
 
-function registrarEvento(resultado) {
-
-    const agora =
-        new Date();
+    document.getElementById(
+        "alerta-titulo"
+    ).textContent =
+        "Não foi possível atualizar os dados";
 
 
-    const horario =
-        String(
-            agora.getHours()
-        ).padStart(2, "0")
-        +
-        ":" +
-        String(
-            agora.getMinutes()
-        ).padStart(2, "0");
+    document.getElementById(
+        "alerta-texto"
+    ).textContent =
+        "Verifique sua conexão com a internet e tente atualizar novamente.";
 
 
-    let evento;
+    document.getElementById(
+        "alerta-causa"
+    ).textContent =
+        "Falha na comunicação com uma das APIs públicas.";
+
+}
 
 
-    if (
-        resultado.nivel === "CRÍTICO"
-    ) {
+/* =========================================================
+   HISTÓRICO
+   ========================================================= */
 
-        evento = {
+function obterHistorico() {
 
-            icone: "🔴",
+    try {
 
-            titulo:
-                "Risco crítico identificado",
+        return JSON.parse(
+            localStorage.getItem(
+                HISTORY_KEY
+            )
+        ) || [];
 
-            horario:
-                horario,
+    } catch {
 
-            descricao:
-                "Nova análise elevou o nível de risco."
-
-        };
+        return [];
 
     }
 
-    else if (
-        resultado.nivel === "ALTO"
-    ) {
-
-        evento = {
-
-            icone: "🟠",
-
-            titulo:
-                "Risco elevado identificado",
-
-            horario:
-                horario,
-
-            descricao:
-                "Alterações relevantes foram detectadas."
-
-        };
-
-    }
-
-    else if (
-        dados.consumo > 110
-    ) {
-
-        evento = {
-
-            icone: "⚠️",
-
-            titulo:
-                "Anomalia de consumo",
-
-            horario:
-                horario,
-
-            descricao:
-                "Consumo acima do padrão de referência."
-
-        };
-
-    }
-
-    else {
-
-        evento = {
-
-            icone: "🟢",
-
-            titulo:
-                "Monitoramento atualizado",
-
-            horario:
-                horario,
-
-            descricao:
-                "Nova análise concluída."
-
-        };
-
-    }
+}
 
 
-    historicoAlertas.unshift(
-        evento
+function salvarHistorico(d) {
+
+    if (!d) return;
+
+
+    const historico =
+        obterHistorico();
+
+
+    const registro = {
+
+        data:
+            new Date().toISOString(),
+
+        cidade:
+            cidadeAtual.nome,
+
+        estado:
+            cidadeAtual.estado,
+
+        latitude:
+            cidadeAtual.latitude,
+
+        longitude:
+            cidadeAtual.longitude,
+
+        temperatura:
+            d.temperatura,
+
+        umidade:
+            d.umidade,
+
+        precipitacao:
+            d.precipitacao,
+
+        chuva24:
+            d.chuva24,
+
+        et0:
+            d.et0,
+
+        vazaoAtual:
+            d.vazaoAtual,
+
+        demanda:
+            d.demanda,
+
+        disponibilidade:
+            d.disponibilidade,
+
+        risco:
+            d.risco,
+
+        anomalia:
+            d.anomalia,
+
+        possivelCausa:
+            d.possivelCausa
+
+    };
+
+
+    historico.unshift(
+        registro
     );
 
 
-    if (
-        historicoAlertas.length > 6
-    ) {
-
-        historicoAlertas.pop();
-
-    }
+    const limitada =
+        historico.slice(
+            0,
+            100
+        );
 
 
-    mostrarHistoricoAlertas();
+    localStorage.setItem(
+        HISTORY_KEY,
+        JSON.stringify(
+            limitada
+        )
+    );
+
+
+    atualizarHistorico();
 
 }
 
 
-// ============================================================
-// MOSTRAR HISTÓRICO
-// ============================================================
+/* =========================================================
+   ATUALIZAR HISTÓRICO
+   ========================================================= */
 
-function mostrarHistoricoAlertas() {
+function atualizarHistorico() {
 
-    const container =
+    const historico =
+        obterHistorico();
+
+
+    const tabela =
         document.getElementById(
-            "historicoAlertas"
+            "tabela-historico"
         );
 
 
-    if (!container) {
+    document.getElementById(
+        "total-registros"
+    ).textContent =
+        historico.length;
+
+
+    if (historico.length === 0) {
+
+        document.getElementById(
+            "maior-risco"
+        ).textContent =
+            "--";
+
+
+        document.getElementById(
+            "maior-anomalia"
+        ).textContent =
+            "--";
+
+
+        tabela.innerHTML = `
+
+            <tr>
+
+                <td colspan="9">
+
+                    Nenhum registro armazenado ainda.
+
+                </td>
+
+            </tr>
+
+        `;
 
         return;
 
     }
 
 
-    container.innerHTML = "";
+    const maiorRisco =
+        Math.max(
+            ...historico.map(
+                item =>
+                    Number(item.risco) || 0
+            )
+        );
 
 
-    historicoAlertas.forEach(
-        function (evento) {
+    const maiorAnomalia =
+        Math.max(
+            ...historico.map(
+                item =>
+                    Number(item.anomalia) || 0
+            )
+        );
 
-            const elemento =
-                document.createElement(
-                    "div"
+
+    document.getElementById(
+        "maior-risco"
+    ).textContent =
+        `${formatarNumero(maiorRisco, 0)}/100`;
+
+
+    document.getElementById(
+        "maior-anomalia"
+    ).textContent =
+        `${formatarNumero(maiorAnomalia, 0)}/100`;
+
+
+    tabela.innerHTML =
+        historico.map(
+            item => {
+
+                const data =
+                    new Date(
+                        item.data
+                    );
+
+
+                return `
+
+                    <tr>
+
+                        <td>
+
+                            ${data.toLocaleDateString("pt-BR")}
+                            <br>
+
+                            <small>
+                                ${data.toLocaleTimeString("pt-BR")}
+                            </small>
+
+                        </td>
+
+
+                        <td>
+
+                            ${item.cidade}
+
+                            <br>
+
+                            <small>
+                                ${item.estado}
+                            </small>
+
+                        </td>
+
+
+                        <td>
+                            ${formatarNumero(item.chuva24, 1)} mm
+                        </td>
+
+
+                        <td>
+                            ${formatarNumero(item.vazaoAtual, 2)} m³/s
+                        </td>
+
+
+                        <td>
+                            ${formatarNumero(item.demanda, 0)}%
+                        </td>
+
+
+                        <td>
+                            ${formatarNumero(item.disponibilidade, 0)}%
+                        </td>
+
+
+                        <td>
+                            ${formatarNumero(item.risco, 0)}/100
+                        </td>
+
+
+                        <td>
+                            ${formatarNumero(item.anomalia, 0)}/100
+                        </td>
+
+
+                        <td class="history-cause">
+
+                            ${item.possivelCausa || "--"}
+
+                        </td>
+
+                    </tr>
+
+                `;
+
+            }
+        ).join("");
+
+}
+
+
+/* =========================================================
+   LIMPAR HISTÓRICO
+   ========================================================= */
+
+document
+    .getElementById("limpar-historico")
+    .addEventListener(
+        "click",
+        () => {
+
+            const confirmar =
+                confirm(
+                    "Tem certeza que deseja apagar todo o histórico?"
                 );
 
 
-            elemento.className =
-                "evento";
+            if (!confirmar) return;
 
 
-            elemento.innerHTML = `
-
-                <div class="evento-icone">
-                    ${evento.icone}
-                </div>
-
-                <div class="evento-info">
-
-                    <b>
-                        ${evento.titulo}
-                    </b>
-
-                    <small>
-                        ${evento.horario}
-                        •
-                        ${evento.descricao}
-                    </small>
-
-                </div>
-
-            `;
-
-
-            container.appendChild(
-                elemento
+            localStorage.removeItem(
+                HISTORY_KEY
             );
+
+
+            atualizarHistorico();
 
         }
     );
 
-}
+
+/* =========================================================
+   BOTÕES
+   ========================================================= */
+
+document
+    .getElementById("buscar-cidade")
+    .addEventListener(
+        "click",
+        buscarCidade
+    );
 
 
-// ============================================================
-// ATUALIZAÇÃO DO RELÓGIO
-// ============================================================
+document
+    .getElementById("atualizar-btn")
+    .addEventListener(
+        "click",
+        carregarDados
+    );
+
+
+document
+    .getElementById("cidade-input")
+    .addEventListener(
+        "keydown",
+        evento => {
+
+            if (
+                evento.key === "Enter"
+            ) {
+
+                buscarCidade();
+
+            }
+
+        }
+    );
+
+
+/* =========================================================
+   MAPA — SELEÇÃO VISUAL
+   ========================================================= */
+
+document
+    .querySelectorAll(".region-card")
+    .forEach(card => {
+
+        card.addEventListener(
+            "click",
+            () => {
+
+                const regiao =
+                    card.dataset.region;
+
+
+                const select =
+                    document.getElementById(
+                        "select-regiao"
+                    );
+
+
+                select.value =
+                    regiao;
+
+
+                window.scrollTo({
+
+                    top: 0,
+
+                    behavior: "smooth"
+
+                });
+
+            }
+        );
+
+    });
+
+
+/* =========================================================
+   ATUALIZAÇÃO AUTOMÁTICA
+   ========================================================= */
 
 setInterval(
-    function () {
-
-        atualizarHora();
-
-    },
-    1000
+    carregarDados,
+    10 * 60 * 1000
 );
 
 
-// ============================================================
-// SIMULAÇÃO DE ATUALIZAÇÃO AUTOMÁTICA
-// ============================================================
+/* =========================================================
+   INICIALIZAÇÃO
+   ========================================================= */
 
-/*
-    A cada 30 segundos o protótipo simula
-    a chegada de uma nova leitura.
+atualizarLocalizacao();
 
-    Isso NÃO significa que esteja conectado
-    a dados reais.
-*/
+atualizarHistorico();
 
-setInterval(
-    function () {
-
-        atualizarDados(false);
-
-    },
-    30000
-);
+carregarDados();
